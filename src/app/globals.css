@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+/*
+  The room this thing lives in: a dim study at night, one lamp on.
+  Everything unlit is warm charcoal; understanding is the only thing that
+  glows. Nothing here is blue-on-black, because every other AI demo is.
+*/
+@theme {
+  --color-pitch: #100e0c;
+  --color-slate-deep: #16130f;
+  --color-panel: #1d1915;
+  --color-panel-lift: #262119;
+  --color-hairline: #332c23;
+
+  --color-ink: #f4ece0;
+  --color-ink-soft: #bdb2a2;
+  --color-ink-faint: #7d7365;
+
+  --color-lit: #f5b83d;
+  --color-lit-bright: #ffd275;
+  --color-named: #7a8fa6;
+  --color-wrong: #dd6a4f;
+  --color-sage: #93b08a;
+
+  --font-display: var(--font-display), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  background: var(--color-pitch);
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-pitch);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+/* Paper tooth. Keeps large dark fields from looking like flat CSS. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+::selection {
+  background: rgba(245, 184, 61, 0.28);
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.9; }
+}
+.breathe { animation: breathe 2.4s ease-in-out infinite; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.rise { animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.slide-in { animation: slide-in 0.44s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes drift {
+  from { stroke-dashoffset: 44; }
+  to { stroke-dashoffset: 0; }
+}
+
+.hairline { border-color: var(--color-hairline); }
+
+/* Thin, quiet scrollbars — the transcript should not grow a chrome gutter. */
+.thin-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.thin-scroll::-webkit-scrollbar-track { background: transparent; }
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-hairline);
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
