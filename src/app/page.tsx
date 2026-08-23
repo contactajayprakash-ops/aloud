@@ -304,6 +304,8 @@ export default function Home() {
           }}
           grading={screen === "grading"}
           onFinish={finish}
+          onLeave={() => reset(false)}
+          onRestart={() => reset(true)}
           oops={oops}
         />
       )}
@@ -543,12 +545,14 @@ function TeachScreen(props: {
   onTypedSubmit: () => void;
   grading: boolean;
   onFinish: () => void;
+  onLeave: () => void;
+  onRestart: () => void;
   oops: string | null;
 }) {
   const {
     map, placed, coverage, justLit, question, dismissQuestion, lines, interim,
     listening, micSupported, micError, onMic, typing, setTyping, typed, setTyped,
-    onTypedSubmit, grading, onFinish, oops,
+    onTypedSubmit, grading, onFinish, onLeave, onRestart, oops,
   } = props;
 
   const litCount = map.concepts.filter((c) => (coverage[c.id] ?? 0) > 0.5).length;
@@ -562,9 +566,27 @@ function TeachScreen(props: {
     <div className="flex min-h-dvh flex-col lg:h-dvh lg:flex-row lg:overflow-hidden">
       {/* -------- map side -------- */}
       <div className="relative flex-1 lg:h-full">
-        <div className="absolute top-0 right-0 left-0 z-10 flex items-center justify-between px-6 pt-5">
+        <div className="absolute top-0 right-0 left-0 z-10 flex items-start justify-between px-6 pt-5">
           <div>
-            <p className="text-xs tracking-[0.2em] uppercase text-ink-faint">Teaching</p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onLeave}
+                disabled={grading}
+                className="hairline rounded-full border bg-panel px-3 py-1 text-xs text-ink-faint transition hover:border-lit/40 hover:text-ink disabled:opacity-30"
+                aria-label="Leave this session and pick a different topic"
+              >
+                ← leave
+              </button>
+              <button
+                onClick={onRestart}
+                disabled={grading}
+                className="hairline rounded-full border bg-panel px-3 py-1 text-xs text-ink-faint transition hover:border-lit/40 hover:text-ink disabled:opacity-30"
+                aria-label="Restart this topic from a dark map"
+              >
+                ↻ start over
+              </button>
+            </div>
+            <p className="mt-3 text-xs tracking-[0.2em] uppercase text-ink-faint">Teaching</p>
             <p className="mt-1 text-lg" style={{ fontFamily: "var(--font-display)" }}>
               {map.topic}
             </p>
