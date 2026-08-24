@@ -94,10 +94,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ grades, headline: result.headline ?? "" });
   } catch (err) {
     console.error("grade:", err);
+    const status = (err as Error & { status?: number }).status;
     const msg =
       err instanceof Error && err.message.includes("GEMINI_API_KEY")
         ? "The server is missing its GEMINI_API_KEY."
-        : "Could not finish grading.";
+        : status === 429
+          ? "The AI hit a rate limit. Your words are safe — wait a moment and press I\u2019m done again."
+          : "Could not finish grading. Your words are safe — press I\u2019m done to retry.";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
