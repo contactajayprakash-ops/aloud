@@ -104,10 +104,13 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("map:", err);
+    const status = (err as Error & { status?: number }).status;
     const msg =
       err instanceof Error && err.message.includes("GEMINI_API_KEY")
         ? "The server is missing its GEMINI_API_KEY."
-        : "Could not build a map for that. Try again in a moment.";
+        : status === 429
+          ? "The AI hit a rate limit \u2014 give it a minute and try again."
+          : "Could not build a map for that. Try again in a moment.";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
