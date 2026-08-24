@@ -9,6 +9,15 @@ export const QUICK_MODEL = "gemini-3.5-flash-lite";
 export const EMBED_MODEL = "gemini-embedding-001";
 export const EMBED_DIMS = 768;
 
+/**
+ * Free-tier quota is tracked per model, so when one model's bucket runs dry
+ * the request walks down a chain of equivalents instead of failing the user.
+ */
+const FALLBACKS: Record<string, string[]> = {
+  [CHAT_MODEL]: ["gemini-flash-latest", "gemini-3.5-flash-lite"],
+  [QUICK_MODEL]: ["gemini-flash-lite-latest", "gemini-flash-latest"],
+};
+
 function key(): string {
   const k = process.env.GEMINI_API_KEY;
   if (!k) throw new Error("GEMINI_API_KEY is not set on the server.");
@@ -39,13 +48,17 @@ async function once(path: string, body: unknown, timeoutMs: number) {
   }
 }
 
-/** 429s and 503s here are load, not bad requests, so they are worth one more go. */
+/**
+ * A 503 is momentary load and worth one more go on the same model. A 429 is
+ * quota and retrying the same bucket is pointless, so it goes straight back to
+ * the caller (which may have fallback models to walk).
+ */
 async function post(path: string, body: unknown, timeoutMs = 45_000) {
   try {
     return await once(path, body, timeoutMs);
   } catch (err) {
     const status = (err as Error & { status?: number }).status;
-    if (status !== 503 && status !== 429) throw err;
+    if (status !== 503) throw err;
     await new Promise((r) => setTimeout(r, 1200));
     return once(path, body, timeoutMs);
   }
@@ -68,14 +81,30 @@ export async function generateJson<T>(
   if (opts.system) {
     body.systemInstruction = { parts: [{ text: opts.system }] };
   }
-  const data = await post(`models/${opts.model ?? CHAT_MODEL}:generateContent`, body);
-  const parts = data?.candidates?.[0]?.content?.parts ?? [];
-  const text = parts
-    .map((p: { text?: string }) => p.text ?? "")
-    .join("")
-    .trim();
-  if (!text) throw new Error("Gemini returned an empty response.");
-  return JSON.parse(text) as T;
+
+  const primary = opts.model ?? CHAT_MODEL;
+  const chain = [primary, ...(FALLBACKS[primary] ?? [])];
+  let lastErr: unknown = null;
+
+  for (const model of chain) {
+    try {
+      const data = await post(`models/${model}:generateContent`, body);
+      const parts = data?.candidates?.[0]?.content?.parts ?? [];
+      const text = parts
+        .map((p: { text?: string }) => p.text ?? "")
+        .join("")
+        .trim();
+      if (!text) throw new Error("Gemini returned an empty response.");
+      return JSON.parse(text) as T;
+    } catch (err) {
+      lastErr = err;
+      const status = (err as Error & { status?: number }).status;
+      // Quota gone, model overloaded, or model retired — the next bucket may
+      // still be fine. Anything else is a real bug and should surface.
+      if (status !== 429 && status !== 503 && status !== 404) throw err;
+    }
+  }
+  throw lastErr;
 }
 
 function l2normalize(v: number[]): number[] {
